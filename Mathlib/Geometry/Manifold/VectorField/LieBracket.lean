@@ -348,7 +348,155 @@ lemma mpullback_mfderivWithin_apply_smul {f : M → 𝕜}
   rw [extChartAt_to_inv]
   exact mfderivWithin_extChartAt_symm_inverse_apply (v := V x)
 
+omit [IsManifold I 2 M] in
+/-- The derivative of a scalar function `f` along the manifold Lie bracket `[V, W]`, evaluated at
+the basepoint `x`, computed in the extended chart at `x`: it equals the vector-space directional
+derivative of `f ∘ (extChartAt I x).symm` along the vector-space Lie bracket of the chart pullbacks
+of `V` and `W`. This is the single-point chart-transport of the vector-space Lie bracket acting on
+`f`, the starting point for the manifold analogue of `VectorField.fderiv_apply_lieBracket`. -/
+lemma mfderiv_apply_mlieBracket_eq_fderivWithin_apply_lieBracketWithin
+    [IsManifold I 1 M] {f : M → 𝕜} (hf : MDiffAt f x) :
+    (d% f x) (mlieBracket I V W x)
+      = fderivWithin 𝕜 (f ∘ (extChartAt I x).symm) (range I) (extChartAt I x x)
+          (lieBracketWithin 𝕜 (mpullbackWithin 𝓘(𝕜, E) I (extChartAt I x).symm V (range I))
+            (mpullbackWithin 𝓘(𝕜, E) I (extChartAt I x).symm W (range I)) (range I)
+            (extChartAt I x x)) := by
+  rw [hf.mvfderiv, mlieBracket, mlieBracketWithin_apply, mfderiv_extChartAt_self]
+  have hset : (extChartAt I x).symm ⁻¹' univ ∩ range I = range I := by
+    rw [preimage_univ, univ_inter]
+  rw [hset]
+  have hwri : writtenInExtChartAt I 𝓘(𝕜, 𝕜) x f = f ∘ (extChartAt I x).symm := by
+    simp only [writtenInExtChartAt, extChartAt_model_space_eq_id, PartialEquiv.refl_coe,
+      Function.id_comp]
+  rw [hwri]
+  congr 1
+  exact congrFun (congrArg _ ContinuousLinearMap.inverse_id) _
+
+omit [IsManifold I 2 M] in
+/-- Chart-transport of a scalar directional derivative into a **fixed** extended chart at `x`.
+For a point `z` in the source of the chart at `x`, the manifold directional derivative
+`(d% f z) (U z)` equals the vector-space directional derivative of `f ∘ (extChartAt I x).symm`
+computed in the fixed chart at `x`, along the chart pullback of `U`. Unlike the intrinsic
+`(d% f z)` — which is computed in the chart at `z` — the right-hand side uses the chart at `x`
+throughout, which is what makes it usable inside an outer derivative in `z` (see
+`apply_mlieBracket`). -/
+lemma mfderiv_apply_eq_fderivWithin_apply_mpullbackWithin
+    [IsManifold I 1 M] {f : M → 𝕜} {U : Π (x : M), TangentSpace I x}
+    (z : M) (hfz : MDiffAt f z) (hz : z ∈ (extChartAt I x).source) :
+    (d% f z) (U z) =
+      fderivWithin 𝕜 (f ∘ (extChartAt I x).symm) (range I) (extChartAt I x z)
+        (mpullbackWithin 𝓘(𝕜, E) I (extChartAt I x).symm U (range I) (extChartAt I x z)) := by
+  have hez : (extChartAt I x).symm (extChartAt I x z) = z := (extChartAt I x).left_inv hz
+  have hEE : f =ᶠ[𝓝 z] (f ∘ (extChartAt I x).symm) ∘ (extChartAt I x) := by
+    filter_upwards [extChartAt_source_mem_nhds' hz] with y hy
+    simp only [Function.comp_apply, (extChartAt I x).left_inv hy]
+  rw [mpullbackWithin_apply, hez]
+  have hmv : d% f z = d% ((f ∘ (extChartAt I x).symm) ∘ (extChartAt I x)) z := by
+    unfold mvfderiv; rw [hEE.mfderiv_eq]; congr 1
+  have hgz : MDiffAt[range I] (f ∘ (extChartAt I x).symm) (extChartAt I x z) := by
+    have hesymm : MDiffAt[range I] (extChartAt I x).symm (extChartAt I x z) :=
+      mdifferentiableWithinAt_extChartAt_symm (PartialEquiv.map_source _ hz)
+    have hfz' : MDiffAt[univ] f ((extChartAt I x).symm (extChartAt I x z)) := by
+      rw [mdifferentiableWithinAt_univ, hez]; exact hfz
+    exact hfz'.comp _ hesymm (by simp)
+  have hc : MDiffAt (extChartAt I x) z := mdifferentiableAt_extChartAt (by simpa using hz)
+  have hcomp : HasMFDerivAt% ((f ∘ (extChartAt I x).symm) ∘ (extChartAt I x)) z
+      ((mfderiv[range I] (f ∘ (extChartAt I x).symm) (extChartAt I x z)).comp
+        (mfderiv% (extChartAt I x) z)) := by
+    rw [← hasMFDerivWithinAt_univ]
+    apply HasMFDerivWithinAt.comp z hgz.hasMFDerivWithinAt
+      ((hasMFDerivWithinAt_univ).2 hc.hasMFDerivAt)
+    intro w _; exact mem_range_self _
+  have hmveq : d% ((f ∘ (extChartAt I x).symm) ∘ (extChartAt I x)) z (U z)
+      = (mfderiv[range I] (f ∘ (extChartAt I x).symm) (extChartAt I x z))
+          ((mfderiv% (extChartAt I x) z) (U z)) := by
+    have h1 : d% ((f ∘ (extChartAt I x).symm) ∘ (extChartAt I x)) z (U z)
+        = (mfderiv% ((f ∘ (extChartAt I x).symm) ∘ (extChartAt I x)) z) (U z) := rfl
+    rw [h1, hcomp.mfderiv]; rfl
+  rw [hmv, hmveq]
+  have hinv : (mfderiv% (extChartAt I x) z) (U z)
+      = (mfderiv[range I] (extChartAt I x).symm (extChartAt I x z)).inverse (U z) :=
+    (congrFun (congrArg _ (ContinuousLinearMap.inverse_eq
+      (mfderivWithin_extChartAt_symm_comp_mfderiv_extChartAt' hz)
+      (mfderiv_extChartAt_comp_mfderivWithin_extChartAt_symm' hz))) (U z)).symm
+  rw [hinv, hgz.mfderivWithin]
+  simp only [ContinuousLinearMap.comp_apply, writtenInExtChartAt,
+    extChartAt_model_space_eq_id, PartialEquiv.refl_symm, PartialEquiv.refl_coe,
+    Function.comp_id, Function.id_comp, id_eq, modelWithCornersSelf_coe,
+    range_id, preimage_id_eq, inter_univ]
+  rfl
+
+omit [IsManifold I 2 M] in
+/-- Fixed-chart form of an *outer* directional derivative of an *inner* directional derivative.
+The term `(d% fun z ↦ (d% f z) (W z)) x (V x)` — one of the two summands appearing on the
+right-hand side of the manifold Lie-bracket-on-functions identity `apply_mlieBracket` — equals the
+vector-space nested directional derivative of `f ∘ (extChartAt I x).symm` computed entirely in the
+extended chart at `x`. This transports the manifold right-hand side into the chart, where the
+vector-space identity `VectorField.fderivWithin_apply_lieBracket` closes the proof. -/
+lemma mvfderiv_apply_mvfderiv_apply_eq_fderivWithin_fderivWithin
+    [IsManifold I 1 M] {f : M → 𝕜} (hf : ∀ z, MDiffAt f z)
+    (hWf : MDiffAt (fun z ↦ (d% f z) (W z)) x) :
+    (d% (fun z ↦ (d% f z) (W z))) x (V x) =
+      fderivWithin 𝕜
+        (fun y ↦ fderivWithin 𝕜 (f ∘ (extChartAt I x).symm) (range I) y
+          (mpullbackWithin 𝓘(𝕜, E) I (extChartAt I x).symm W (range I) y))
+        (range I) (extChartAt I x x)
+        (mpullbackWithin 𝓘(𝕜, E) I (extChartAt I x).symm V (range I) (extChartAt I x x)) := by
+  rw [mfderiv_apply_eq_fderivWithin_apply_mpullbackWithin (f := fun z ↦ (d% f z) (W z))
+    (U := V) x hWf (mem_extChartAt_source x)]
+  congr 1
+  apply Filter.EventuallyEq.fderivWithin_eq
+  · filter_upwards [extChartAt_target_mem_nhdsWithin x] with y hy
+    have hey : (extChartAt I x) ((extChartAt I x).symm y) = y := (extChartAt I x).right_inv hy
+    have hmem : (extChartAt I x).symm y ∈ (extChartAt I x).source :=
+      (extChartAt I x).map_target hy
+    simp only [Function.comp_apply]
+    rw [mfderiv_apply_eq_fderivWithin_apply_mpullbackWithin (f := f) (U := W)
+      ((extChartAt I x).symm y) (hf _) hmem, hey]
+  · have hex : (extChartAt I x).symm (extChartAt I x x) = x := extChartAt_to_inv x
+    simp only [Function.comp_apply]
+    rw [mfderiv_apply_eq_fderivWithin_apply_mpullbackWithin (f := f) (U := W)
+      ((extChartAt I x).symm (extChartAt I x x)) (hf _)
+      (by rw [hex]; exact mem_extChartAt_source x), extChartAt_to_inv]
+
 variable [CompleteSpace E]
+
+/-- The manifold analogue of `VectorField.fderiv_apply_lieBracket`: for a `C²` scalar function `f`,
+the directional derivative of `f` along the manifold Lie bracket `[V, W]` equals the commutator of
+the directional-derivative operators,
+`(d% f x) [V, W] = (d% (fun z ↦ (d% f z) (W z))) x (V x) − (d% (fun z ↦ (d% f z) (V z))) x (W x)`.
+This is the manifold form of the classical identity `[V, W] f = V (W f) − W (V f)`. -/
+lemma apply_mlieBracket {f : M → 𝕜} {n : ℕ∞ω} [IsManifold I n M]
+    (hf : ∀ z, ContMDiffAt I 𝓘(𝕜, 𝕜) n f z) (hn : minSmoothness 𝕜 2 ≤ n)
+    (hV : MDiffAt (fun z ↦ (V z : TangentBundle I M)) x)
+    (hW : MDiffAt (fun z ↦ (W z : TangentBundle I M)) x)
+    (hVf : MDiffAt (fun z ↦ (d% f z) (V z)) x)
+    (hWf : MDiffAt (fun z ↦ (d% f z) (W z)) x) :
+    (d% f x) (mlieBracket I V W x)
+      = (d% fun z ↦ (d% f z) (W z)) x (V x) - (d% fun z ↦ (d% f z) (V z)) x (W x) := by
+  have hne : n ≠ 0 := (lt_of_lt_of_le two_pos (le_minSmoothness.trans hn)).ne'
+  have hf' : ∀ z, MDiffAt f z := fun z ↦ (hf z).mdifferentiableAt hne
+  rw [mfderiv_apply_mlieBracket_eq_fderivWithin_apply_lieBracketWithin (hf' x)]
+  have hcd : ContDiffWithinAt 𝕜 n (f ∘ (extChartAt I x).symm) (range I) (extChartAt I x x) :=
+    ((hf x).comp_contMDiffWithinAt_of_eq
+      (contMDiffWithinAt_extChartAt_symm_range x (mem_extChartAt_target x))
+      (extChartAt_to_inv x)).contDiffWithinAt
+  have hsimp : (extChartAt I x).symm ⁻¹' univ ∩ range I = range I := by
+    rw [preimage_univ, univ_inter]
+  have hVd : DifferentiableWithinAt 𝕜
+      (mpullbackWithin 𝓘(𝕜, E) I (extChartAt I x).symm V (range I)) (range I)
+      (extChartAt I x x) := by
+    have := (mdifferentiableWithinAt_univ.2 hV).differentiableWithinAt_mpullbackWithin_vectorField
+    rwa [hsimp] at this
+  have hWd : DifferentiableWithinAt 𝕜
+      (mpullbackWithin 𝓘(𝕜, E) I (extChartAt I x).symm W (range I)) (range I)
+      (extChartAt I x x) := by
+    have := (mdifferentiableWithinAt_univ.2 hW).differentiableWithinAt_mpullbackWithin_vectorField
+    rwa [hsimp] at this
+  rw [fderivWithin_apply_lieBracket (n := n) hcd hn
+    I.uniqueDiffOn (I.range_subset_closure_interior (mem_range_self _)) (mem_range_self _) hWd hVd]
+  rw [← mvfderiv_apply_mvfderiv_apply_eq_fderivWithin_fderivWithin hf' hWf,
+    ← mvfderiv_apply_mvfderiv_apply_eq_fderivWithin_fderivWithin hf' hVf]
 
 set_option backward.isDefEq.respectTransparency false in
 /--
