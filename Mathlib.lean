@@ -5558,6 +5558,7 @@ public import Mathlib.MeasureTheory.Integral.DivergenceTheorem
 public import Mathlib.MeasureTheory.Integral.DominatedConvergence
 public import Mathlib.MeasureTheory.Integral.ExpDecay
 public import Mathlib.MeasureTheory.Integral.FinMeasAdditive
+public import Mathlib.MeasureTheory.Integral.FundamentalLemmaCalcVar
 public import Mathlib.MeasureTheory.Integral.Gamma
 public import Mathlib.MeasureTheory.Integral.Indicator
 public import Mathlib.MeasureTheory.Integral.IntegrableOn
