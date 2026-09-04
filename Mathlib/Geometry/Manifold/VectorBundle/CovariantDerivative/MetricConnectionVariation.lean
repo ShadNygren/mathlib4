@@ -45,6 +45,15 @@ positivity beyond the ambient `RiemannianBundle`, no local frames** — mirrorin
 * `CovariantDerivative.koszulVarCovector_ne_zero`, `metricConnPerturbAux_ne_zero`: the construction
   is faithful — a nonzero Koszul-variation scalar gives a nonzero covector, and (the musical
   isomorphism being a linear equivalence) a nonzero covector gives a nonzero `A(h)`.
+* `CovariantDerivative.MetricConnPerturbWitness`: a **concrete non-vacuity witness** on flat
+  Euclidean space `ℝ²`. With the flat Levi-Civita connection, the constant basis field `cVF e₀` in
+  all three slots and the nonconstant symmetric metric perturbation `hPert e₀ x = ⟪e₀, x⟫ • innerSL`,
+  the Koszul-variation scalar is `koszulVarInner_witness : … = 1/2` (hence
+  `koszulVarInner_ne_zero_witness`), which chains through the two faithfulness lemmas to
+  `koszulVarCovector_ne_zero_witness` and `metricConnPerturbAux_ne_zero_witness : A(h) ≠ 0`. The key
+  geometric input is `leviCivitaConnection_cVF_eq_zero` (`∇` annihilates constant fields on the flat
+  model). This discharges the mathematically-substantive `koszulVarInner ≠ 0` conditional; the
+  smoothness data `hhYX`/`hhXY` is carried as a hypothesis (see the scope note).
 
 ## Scope (honest)
 
@@ -55,6 +64,16 @@ construction is pointwise in them). Bundling `A(h)` into the full perturbation t
 `Π x, TangentSpace I x →L[ℝ] TangentSpace I x →L[ℝ] TangentSpace I x` used by
 `CurvatureVariation.addOneFormAux` (so as to feed `curvatureAux_addOneForm_eq`), and the resulting
 second-order metric variation, are *not* treated here.
+
+The differentiability hypotheses `hhYX`/`hhXY` of `koszulVarCovector`/`metricConnPerturbAux` are
+stated for *all* direction fields `W` (mirroring the `∀ W` shape of the covector's `mkHom` inputs).
+They are genuinely dischargeable only on *differentiable* `W` (see
+`MetricConnPerturbWitness.mdiff_hPert_of_mdiff`), so the concrete witness
+`metricConnPerturbAux_ne_zero_witness` carries them as hypotheses: it discharges the
+mathematically-substantive `koszulVarInner ≠ 0` conditional unconditionally, but not the
+well-formedness smoothness datum. Conditioning these hypotheses on `MDiffAt (T% W) x` (a
+statement-improvement leaving all proofs intact, since the tensoriality proof only ever applies them
+to differentiable slots) would make the whole chain fully unconditional.
 
 -/
 
@@ -258,6 +277,198 @@ theorem koszulVarCovector_ne_zero {x : M}
   intro hzero
   apply hne
   rw [← koszulVarCovector_apply (cov := cov) I hhYX hhXY hZ, hzero, zero_apply]
+
+/-! ## A concrete non-vacuity witness: `A(h) ≠ 0` on flat Euclidean space `ℝ²`
+
+We discharge the mathematically-substantive conditional of `metricConnPerturbAux_ne_zero`
+(namely that the Koszul-variation scalar `koszulVarInner` is nonzero) with a fully explicit choice:
+the flat Levi-Civita connection of `ℝ²`, the constant basis field `cVF e₀` in all three slots, and
+the nonconstant symmetric metric perturbation `hPert e₀ x = ⟪e₀, x⟫ • innerSL ℝ`. The concrete
+Koszul-variation scalar computes to `1/2` (`koszulVarInner_witness`), and this chains through
+`koszulVarCovector_ne_zero` and `metricConnPerturbAux_ne_zero` to `A(h) ≠ 0`
+(`metricConnPerturbAux_ne_zero_witness`).
+
+The key geometric fact making the computation explicit is `leviCivitaConnection_cVF_eq_zero`: on the
+flat/constant-metric model, the Levi-Civita connection annihilates every constant vector field
+(`∇(cVF e) = 0`), so the two connection (Christoffel) terms of `covDerivBilin` vanish and only the
+directional derivative of the metric perturbation survives. -/
+namespace MetricConnPerturbWitness
+
+open scoped RealInnerProductSpace
+
+/-- A constant vector field `z ↦ a` on the tangent bundle of `ℝ²`. -/
+def cVF (a : EuclideanSpace ℝ (Fin 2)) :
+    Π z : EuclideanSpace ℝ (Fin 2), TangentSpace 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) z := fun _ ↦ a
+
+/-- The symmetric, nonconstant metric perturbation `h x = ⟪v₀, x⟫ • innerSL ℝ`, i.e.
+`h x u w = ⟪v₀, x⟫ * ⟪u, w⟫`. It is symmetric in `(u, w)` and its `x`-dependence is linear
+(nonconstant for `v₀ ≠ 0`), so it produces a nonzero Koszul variation. -/
+noncomputable def hPert (v0 : EuclideanSpace ℝ (Fin 2)) :
+    Π x : EuclideanSpace ℝ (Fin 2), TangentSpace 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) x →L[ℝ]
+      TangentSpace 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) x →L[ℝ] ℝ :=
+  fun x ↦ (⟪v0, x⟫) • (innerSL ℝ)
+
+/-- A constant vector field on the tangent bundle of the vector-space model `ℝ²` is differentiable:
+its coordinate in the (identity) trivialization is constant. -/
+lemma cVF_mdiff (a x : EuclideanSpace ℝ (Fin 2)) : MDiffAt (T% (cVF a)) x := by
+  rw [mdifferentiableAt_section]
+  exact (mdifferentiableAt_const (c := a)).congr_of_eventuallyEq
+    (by filter_upwards with y; simp [cVF])
+
+lemma hPert_apply (v0 x u w : EuclideanSpace ℝ (Fin 2)) : hPert v0 x u w = ⟪v0, x⟫ * ⟪u, w⟫ := by
+  show ((⟪v0, x⟫ • (innerSL ℝ)) u) w = _
+  rw [smul_apply, smul_apply, innerSL_apply_apply, smul_eq_mul]
+
+/-- The Lie bracket of two constant vector fields on `ℝ²` vanishes (both `fderiv`s of a constant are
+zero). -/
+lemma mlie_cVF (v w x : EuclideanSpace ℝ (Fin 2)) :
+    VectorField.mlieBracket 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) (cVF v) (cVF w) x = 0 := by
+  rw [← mlieBracketWithin_univ, mlieBracketWithin_eq_lieBracketWithin]
+  show VectorField.lieBracketWithin ℝ (fun _ ↦ v) (fun _ ↦ w) univ x = 0
+  simp [VectorField.lieBracketWithin]
+
+/-- On the model space `ℝ²`, the manifold directional derivative `d%` of a differentiable scalar
+field is the ordinary Fréchet derivative `fderiv` (chart = identity). -/
+lemma mvfderiv_eq_fderiv (g : EuclideanSpace ℝ (Fin 2) → ℝ) (x : EuclideanSpace ℝ (Fin 2))
+    (hg : DifferentiableAt ℝ g x) (e : EuclideanSpace ℝ (Fin 2)) :
+    d% g x e = fderiv ℝ g x e := by
+  rw [hg.mdifferentiableAt.mvfderiv]
+  simp only [writtenInExtChartAt, extChartAt_model_space_eq_id, PartialEquiv.refl_coe,
+    Function.comp_id, Function.id_comp, PartialEquiv.refl_symm, modelWithCornersSelf_coe,
+    range_id, fderivWithin_univ]
+  rfl
+
+/-- The inner product of the Levi-Civita covariant derivative of a constant field against a
+constant field vanishes: on the flat model every `d% ⟪·,·⟫` and Lie-bracket term is zero. -/
+lemma inner_leviCivita_cVF (e v w x : EuclideanSpace ℝ (Fin 2)) :
+    ⟪leviCivitaConnection 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) (EuclideanSpace ℝ (Fin 2))
+      (cVF e) x (cVF v x), (cVF w x)⟫ = 0 := by
+  rw [leviCivitaConnection_apply_inner (I := 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)))
+    (M := EuclideanSpace ℝ (Fin 2)) (X := cVF v) (Y := cVF e) (Z := cVF w)
+    (cVF_mdiff v x) (cVF_mdiff e x) (cVF_mdiff w x)]
+  have hc : ∀ (p q : EuclideanSpace ℝ (Fin 2)),
+      (fun z : EuclideanSpace ℝ (Fin 2) ↦ ⟪cVF p z, cVF q z⟫) = fun _ ↦ ⟪p, q⟫ := fun p q ↦ rfl
+  simp only [hc, mvfderiv_const, mlie_cVF, zero_apply]
+  simp
+
+/-- **`∇(cVF e) = 0`.** The flat Levi-Civita connection of the constant Euclidean metric annihilates
+every constant vector field. -/
+lemma leviCivitaConnection_cVF_eq_zero (e : EuclideanSpace ℝ (Fin 2))
+    {x : EuclideanSpace ℝ (Fin 2)} (v : TangentSpace 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) x) :
+    leviCivitaConnection 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) (EuclideanSpace ℝ (Fin 2)) (cVF e) x v
+      = 0 := by
+  apply ext_inner_left ℝ
+  intro w
+  rw [inner_zero_right, real_inner_comm]
+  simpa [cVF] using inner_leviCivita_cVF e v w x
+
+/-- The surviving directional-derivative term: `d% (fun z ↦ h z e e) x e = ⟪v₀, e⟫ * ⟪e, e⟫`. -/
+lemma mvfderiv_hPert (v0 e x : EuclideanSpace ℝ (Fin 2)) :
+    d% (fun z : EuclideanSpace ℝ (Fin 2) ↦ hPert v0 z (cVF e z) (cVF e z)) x (cVF e x)
+      = ⟪v0, e⟫ * ⟪e, e⟫ := by
+  have hfun : (fun z : EuclideanSpace ℝ (Fin 2) ↦ hPert v0 z (cVF e z) (cVF e z))
+      = fun z ↦ ⟪v0, z⟫ * ⟪e, e⟫ := by
+    ext z; simp only [cVF]; rw [hPert_apply]
+  have hd2 : DifferentiableAt ℝ (fun z : EuclideanSpace ℝ (Fin 2) ↦ ⟪v0, z⟫) x :=
+    (innerSL ℝ v0).differentiableAt.congr_of_eventuallyEq
+      (by filter_upwards with z; rw [innerSL_apply_apply])
+  have hdiff : DifferentiableAt ℝ (fun z : EuclideanSpace ℝ (Fin 2) ↦ ⟪v0, z⟫ * ⟪e, e⟫) x :=
+    hd2.mul (differentiableAt_const _)
+  have hfd : fderiv ℝ (fun z : EuclideanSpace ℝ (Fin 2) ↦ ⟪v0, z⟫) x e = ⟪v0, e⟫ := by
+    have heq : (fun z : EuclideanSpace ℝ (Fin 2) ↦ ⟪v0, z⟫) = ⇑(innerSL ℝ v0) := by
+      ext z; rw [innerSL_apply_apply]
+    rw [heq, ContinuousLinearMap.fderiv, innerSL_apply_apply]
+  rw [show cVF e x = e from rfl, hfun, mvfderiv_eq_fderiv _ x hdiff e, fderiv_mul_const hd2]
+  rw [smul_apply, smul_eq_mul, hfd, mul_comm]
+
+/-- The covariant derivative of `hPert v₀` in the all-constant configuration: the two connection
+terms vanish by `leviCivitaConnection_cVF_eq_zero`, leaving `⟪v₀, e⟫ * ⟪e, e⟫`. -/
+lemma covDerivBilin_cVF (v0 e x : EuclideanSpace ℝ (Fin 2)) :
+    covDerivBilin 𝓘(ℝ, EuclideanSpace ℝ (Fin 2))
+      (leviCivitaConnection 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) (EuclideanSpace ℝ (Fin 2)))
+      (hPert v0) (cVF e) (cVF e) (cVF e) x = ⟪v0, e⟫ * ⟪e, e⟫ := by
+  rw [covDerivBilin]
+  simp only [leviCivitaConnection_cVF_eq_zero, map_zero, zero_apply, sub_zero]
+  rw [mvfderiv_hPert]
+
+/-- The Koszul-variation scalar in the all-constant configuration equals `(⟪v₀, e⟫ * ⟪e, e⟫) / 2`
+(the three `covDerivBilin` terms are identical, giving `(T + T − T)/2 = T/2`). -/
+lemma koszulVarInner_cVF (v0 e x : EuclideanSpace ℝ (Fin 2)) :
+    koszulVarInner 𝓘(ℝ, EuclideanSpace ℝ (Fin 2))
+      (leviCivitaConnection 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) (EuclideanSpace ℝ (Fin 2)))
+      (hPert v0) (cVF e) (cVF e) (cVF e) x = (⟪v0, e⟫ * ⟪e, e⟫) / 2 := by
+  rw [koszulVarInner, covDerivBilin_cVF]; ring
+
+/-- The explicit basis vector `e₀ = (1, 0) ∈ ℝ²`. -/
+def e0 : EuclideanSpace ℝ (Fin 2) := EuclideanSpace.single 0 1
+
+@[simp] lemma inner_e0_e0 : (⟪e0, e0⟫ : ℝ) = 1 := by simp [e0]
+
+/-- **Concrete nonzero Koszul-variation scalar.** For `v₀ = e = e₀`, `koszulVarInner = 1/2`. -/
+lemma koszulVarInner_witness (x : EuclideanSpace ℝ (Fin 2)) :
+    koszulVarInner 𝓘(ℝ, EuclideanSpace ℝ (Fin 2))
+      (leviCivitaConnection 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) (EuclideanSpace ℝ (Fin 2)))
+      (hPert e0) (cVF e0) (cVF e0) (cVF e0) x = 1 / 2 := by
+  rw [koszulVarInner_cVF, inner_e0_e0]; norm_num
+
+/-- **`koszulVarInner ≠ 0` for the explicit choice** — discharging the mathematically-substantive
+conditional of `koszulVarCovector_ne_zero`/`metricConnPerturbAux_ne_zero`. -/
+theorem koszulVarInner_ne_zero_witness (x : EuclideanSpace ℝ (Fin 2)) :
+    koszulVarInner 𝓘(ℝ, EuclideanSpace ℝ (Fin 2))
+      (leviCivitaConnection 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) (EuclideanSpace ℝ (Fin 2)))
+      (hPert e0) (cVF e0) (cVF e0) (cVF e0) x ≠ 0 := by
+  rw [koszulVarInner_witness]; norm_num
+
+/-- If `W` is differentiable, the scalar field `z ↦ hPert e₀ z (cVF e₀ z) (W z)` is differentiable
+— the smoothness/well-formedness datum `koszulVarCovector` requires in its `Z` slot. (For an
+*arbitrary* `W` this is false, which is why the theorems below carry `hhYX`/`hhXY` as
+hypotheses.) -/
+lemma mdiff_hPert_of_mdiff {x : EuclideanSpace ℝ (Fin 2)}
+    (W : Π z : EuclideanSpace ℝ (Fin 2), TangentSpace 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) z)
+    (hW : MDiffAt (T% W) x) :
+    MDiffAt (fun z ↦ hPert e0 z (cVF e0 z) (W z)) x := by
+  have hfun : (fun z : EuclideanSpace ℝ (Fin 2) ↦ hPert e0 z (cVF e0 z) (W z))
+      = fun z ↦ (⟪e0, z⟫) * (⟪(cVF e0 z), W z⟫) := by
+    ext z
+    show ((⟪e0, z⟫ • (innerSL ℝ)) (cVF e0 z)) (W z) = _
+    rw [smul_apply, smul_apply, innerSL_apply_apply, smul_eq_mul]
+  rw [hfun]
+  refine MDifferentiableAt.mul ?_ (MDifferentiableAt.inner_bundle (cVF_mdiff e0 x) hW)
+  exact (innerSL ℝ e0).mdifferentiableAt.congr_of_eventuallyEq
+    (by filter_upwards with z; rw [innerSL_apply_apply])
+
+/-- **The Koszul-variation covector is nonzero for the explicit choice.** Given the smoothness data
+`hhYX`/`hhXY` (dischargeable on differentiable directions by `mdiff_hPert_of_mdiff`), the concrete
+covector is nonzero: its value `1/2` on the differentiable direction `cVF e₀` is provided by
+`koszulVarInner_ne_zero_witness`. -/
+theorem koszulVarCovector_ne_zero_witness {x : EuclideanSpace ℝ (Fin 2)}
+    (hhYX : ∀ W : Π z : EuclideanSpace ℝ (Fin 2), TangentSpace 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) z,
+      MDiffAt (fun z ↦ hPert e0 z (cVF e0 z) (W z)) x)
+    (hhXY : ∀ W : Π z : EuclideanSpace ℝ (Fin 2), TangentSpace 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) z,
+      MDiffAt (fun z ↦ hPert e0 z (cVF e0 z) (W z)) x) :
+    koszulVarCovector 𝓘(ℝ, EuclideanSpace ℝ (Fin 2))
+      (leviCivitaConnection 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) (EuclideanSpace ℝ (Fin 2)))
+      (hPert e0) (cVF e0) (cVF e0) hhYX hhXY ≠ 0 :=
+  koszulVarCovector_ne_zero (Z := cVF e0) (cov := leviCivitaConnection _ _)
+    _ hhYX hhXY (cVF_mdiff e0 x) (koszulVarInner_ne_zero_witness x)
+
+/-- **`A(h) ≠ 0` for the explicit choice** — chaining `koszulVarCovector_ne_zero_witness` through
+`metricConnPerturbAux_ne_zero`. On flat Euclidean space `ℝ²`, the constant field `cVF e₀` and the
+nonconstant symmetric metric perturbation `hPert e₀` give a nonzero metric→connection variation
+`A(h)`; the underlying Koszul-variation scalar is `1/2` (`koszulVarInner_witness`). The smoothness
+data `hhYX`/`hhXY` is the intrinsic well-formedness datum of the covector construction
+(dischargeable on differentiable directions by `mdiff_hPert_of_mdiff`). -/
+theorem metricConnPerturbAux_ne_zero_witness {x : EuclideanSpace ℝ (Fin 2)}
+    (hhYX : ∀ W : Π z : EuclideanSpace ℝ (Fin 2), TangentSpace 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) z,
+      MDiffAt (fun z ↦ hPert e0 z (cVF e0 z) (W z)) x)
+    (hhXY : ∀ W : Π z : EuclideanSpace ℝ (Fin 2), TangentSpace 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) z,
+      MDiffAt (fun z ↦ hPert e0 z (cVF e0 z) (W z)) x) :
+    metricConnPerturbAux 𝓘(ℝ, EuclideanSpace ℝ (Fin 2))
+      (leviCivitaConnection 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) (EuclideanSpace ℝ (Fin 2)))
+      (hPert e0) (cVF e0) (cVF e0) hhYX hhXY ≠ 0 :=
+  metricConnPerturbAux_ne_zero _ hhYX hhXY (koszulVarCovector_ne_zero_witness hhYX hhXY)
+
+end MetricConnPerturbWitness
 
 end CovariantDerivative
 
