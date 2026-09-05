@@ -71,15 +71,26 @@ variation-order up:
   `LinearMap.trace` of the linearized curvature endomorphism on `TM` (`V = TM`).
 * `IsCovariantDerivativeOn.linScalarCurvature`: the linearized scalar curvature `δ¹R[A]_scal`, the
   metric trace `∑ i δ¹Ric[A](e i, e i)`.
-* `IsCovariantDerivativeOn.linEinsteinTensor`: the **linearized Einstein tensor**
-  `δ¹G[A] = δ¹Ric[A] − ½ δ¹R[A]_scal · g`.
+* `IsCovariantDerivativeOn.linEinsteinTensor`: the **fixed-metric-contraction connection-curvature
+  variation** `δ¹G[A] = δ¹Ric[A] − ½ δ¹R[A]_scal · g` (the metric `g` is held fixed in the
+  contraction — see the scope note below; this is NOT the full metric variation of the Einstein
+  tensor).
 * `IsCovariantDerivativeOn.sum_linEinsteinTensor_frame_diag`: the non-vacuity trace identity
   `tr_g(δ¹G[A]) = δ¹R[A]_scal (1 − d/2)`.
 
-## Scope of `δ¹G[A]` (honest)
+## Scope of `δ¹G[A]` and `δ²G[A]` (honest)
 
-This is the linearized Einstein tensor for a *connection* perturbation `A`. Specialising to
-`A = A(h)` (a *metric* perturbation, via the Levi-Civita/Koszul formula) and the resulting second-order metric variation are *not* treated here.
+`linEinsteinTensor`/`quadEinsteinTensor` are the **fixed-metric-contraction** connection-curvature
+variations `linRicci − ½ linScalar · g` (resp. the quadratic analogue): the curvature part is varied
+in the *connection* variable `A`, while the metric `g` is held FIXED throughout the Einstein
+contraction — both the explicit `g(Y, Z) = ⟪Y, Z⟫` factor and the metric traces (via the fixed
+`stdOrthonormalBasis`) that define the scalar curvature.
+
+They are therefore NOT the full variation of the Einstein tensor.  Two things are not treated here:
+(i) specialising to `A = A(h)` for a *metric* perturbation `h` via the Levi-Civita/Koszul formula;
+and (ii) the additional metric-variation terms that the full Einstein-tensor variation carries — in
+particular the variation of the inverse-metric contraction (the raised indices in the scalar trace)
+and of the `g` factor, which vanish here because `g` is fixed.
 -/
 
 open Bundle Set NormedSpace FiberBundle
@@ -454,7 +465,9 @@ lemma curvatureAux_addOneForm_of_flat (hcov : IsCovariantDerivativeOn F cov univ
 
 Specialising the linearized curvature `linCurvatureVF` to the tangent bundle `V = TM`, its Ricci
 trace is the *first variation of the Ricci curvature* `δ¹Ric[A] = linRicciAux`, and the Einstein
-combination gives the **linearized Einstein tensor** `δ¹G[A] = linEinsteinTensor`. Everything mirrors
+combination gives `δ¹G[A] = linEinsteinTensor` — the **fixed-metric-contraction** connection-curvature
+variation `linRicci − ½ linScalar · g` (the metric is held fixed; NOT the full metric variation of the
+Einstein tensor — see the module scope note and the `linEinsteinTensor` docstring). Everything mirrors
 the base `ricciEndo → ricciAux → scalarCurvature → einsteinTensor` chain of `Curvature.lean`, one
 variation-order up. The `Z`-slot section here is the fixed section `Z` of `TM`, and the linearized
 curvature carries the `A`-smoothness bridge `hAσx` (paired with `Z`) in place of the base
@@ -572,10 +585,19 @@ lemma linScalarCurvature_apply
         (extend E ((stdOrthonormalBasis ℝ (TangentSpace I x)) i)) (hAframe i) x :=
   rfl
 
-/-- The **linearized Einstein tensor** `δ¹G[A](Y, Z) = δ¹Ric[A](Y, Z) − ½ δ¹R[A]_scal · g(Y, Z)` of
-an affine connection `covT` on `TM` under a connection perturbation `AT`. This is the first variation
-of the Einstein tensor `G = Ric − ½ R g` under the connection perturbation `A` — the linearized
-Einstein operator `δ¹G[A]`. Mirrors `einsteinTensor` one variation-order up.
+/-- The **fixed-metric-contraction connection-curvature variation**
+`linRicci − ½ linScalar · g`, i.e. `δ¹G[A](Y, Z) = δ¹Ric[A](Y, Z) − ½ δ¹R[A]_scal · g(Y, Z)`,
+of an affine connection `covT` on `TM` under a *connection* perturbation `AT`.
+
+Scope (honest — read before interpreting): this varies *only* the curvature-tensor part of the
+Einstein combination `G = Ric − ½ R g`, holding the metric `g` FIXED throughout the contraction —
+both the explicit `g(Y, Z) = ⟪Y, Z⟫` factor and the metric traces defining `δ¹R[A]_scal` (via the
+fixed `stdOrthonormalBasis`) use the unperturbed metric.  It is therefore the connection-perturbation
+variation of the *curvature* assembled with the fixed metric, NOT the full variation of the Einstein
+tensor: the latter, for a genuine *metric* perturbation `h`, would additionally vary the
+inverse-metric contraction (the raised indices in the scalar trace) and the `g` factor.  Those
+metric-variation terms are not present here.  Mirrors `einsteinTensor` one variation-order up, in the
+connection variable.
 
 Honest hypotheses: `hAσx` is the `A`-smoothness bridge in the linearized Ricci `Z`-slot; `hAframe`
 is the frame `A`-smoothness bridge for the linearized scalar-curvature trace. -/
@@ -789,9 +811,12 @@ end quadCurvatureVF
 
 Specialising the quadratic curvature `quadCurvatureVF` to the tangent bundle `V = TM`, its Ricci
 trace is the *second variation of the Ricci curvature* `δ²Ric[A] = quadRicciAux`, and the Einstein
-combination gives the **quadratic Einstein tensor** `δ²G[A] = quadEinsteinTensor`. Everything mirrors
-the linearized `linRicciEndo → linRicciAux → linScalarCurvature → linEinsteinTensor` chain, one
-variation-order up — but with **no `A`-smoothness bridge** (`quadCurvatureVF` is unconditional). -/
+combination gives `δ²G[A] = quadEinsteinTensor` — the **fixed-metric-contraction** quadratic
+connection-curvature variation `quadRicci − ½ quadScalar · g` (the metric is held fixed; NOT the full
+second metric variation of the Einstein tensor — see the module scope note and the
+`quadEinsteinTensor` docstring). Everything mirrors the linearized
+`linRicciEndo → linRicciAux → linScalarCurvature → linEinsteinTensor` chain, one variation-order up —
+but with **no `A`-smoothness bridge** (`quadCurvatureVF` is unconditional). -/
 
 section quadRicci
 
@@ -883,15 +908,20 @@ lemma quadScalarCurvature_apply (x : M) :
         (extend E ((stdOrthonormalBasis ℝ (TangentSpace I x)) i)) x :=
   rfl
 
-/-- The **quadratic Einstein tensor** `δ²G[A](Y, Z) = δ²Ric[A](Y, Z) − ½ δ²R[A]_scal · g(Y, Z)` of an
-affine connection on `TM` under a connection perturbation `AT`. This is the second variation of the
-Einstein tensor `G = Ric − ½ R g` that is *quadratic* in the connection perturbation `A` — the
-quadratic Einstein operator `δ²G[A]`. Mirrors `linEinsteinTensor` one variation-order up, but with
-**no `A`-smoothness bridge** (the whole quadratic chain is unconditional).
+/-- The **fixed-metric-contraction quadratic connection-curvature variation**
+`quadRicci − ½ quadScalar · g`, i.e. `δ²G[A](Y, Z) = δ²Ric[A](Y, Z) − ½ δ²R[A]_scal · g(Y, Z)`, of
+an affine connection on `TM` under a *connection* perturbation `AT`; the part quadratic in `A`.
 
-This is the **quadratic-in-`A` half** of the full second-order Einstein variation `δ²G[h, h]`; the
-other half is `δ¹G[A₂]` with `A₂` the second-order connection variation of the Levi-Civita connection
-(not treated here). -/
+Scope (honest — same caveat as `linEinsteinTensor`, one order up): the metric `g` is held FIXED in
+the contraction (the explicit `g(Y, Z)` factor and the metric traces in `δ²R[A]_scal`).  This is
+therefore the quadratic connection-perturbation variation of the *curvature* assembled with the fixed
+metric, NOT the full second metric variation of the Einstein tensor (which for a metric perturbation
+would also vary the inverse-metric contraction / raised indices).  Mirrors `linEinsteinTensor` one
+variation-order up, with **no `A`-smoothness bridge** (the whole quadratic chain is unconditional).
+
+Even at the connection level this is only the **quadratic-in-`A` half** of a full second-order
+variation `δ²G[h, h]`; the other half is `δ¹G[A₂]` with `A₂` the second-order connection variation of
+the Levi-Civita connection (not treated here). -/
 noncomputable def quadEinsteinTensor (Y Z : Π x : M, TangentSpace I x) (x : M) : ℝ :=
   quadRicciAux AT Y Z x
     - (1 / 2) * quadScalarCurvature AT x * inner ℝ (Y x) (Z x)
