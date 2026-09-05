@@ -53,7 +53,9 @@ positivity beyond the ambient `RiemannianBundle`, no local frames** — mirrorin
   `koszulVarCovector_ne_zero_witness` and `metricConnPerturbAux_ne_zero_witness : A(h) ≠ 0`. The key
   geometric input is `leviCivitaConnection_cVF_eq_zero` (`∇` annihilates constant fields on the flat
   model). This discharges the mathematically-substantive `koszulVarInner ≠ 0` conditional; the
-  smoothness data `hhYX`/`hhXY` is carried as a hypothesis (see the scope note).
+  smoothness data `hhYX`/`hhXY` — now conditioned on `MDiffAt (T% W) x` — is discharged
+  unconditionally by `mdiff_hPert_of_mdiff`, so the witness is **fully unconditional** (see the
+  scope note).
 
 ## Scope (honest)
 
@@ -66,14 +68,15 @@ construction is pointwise in them). Bundling `A(h)` into the full perturbation t
 second-order metric variation, are *not* treated here.
 
 The differentiability hypotheses `hhYX`/`hhXY` of `koszulVarCovector`/`metricConnPerturbAux` are
-stated for *all* direction fields `W` (mirroring the `∀ W` shape of the covector's `mkHom` inputs).
-They are genuinely dischargeable only on *differentiable* `W` (see
-`MetricConnPerturbWitness.mdiff_hPert_of_mdiff`), so the concrete witness
-`metricConnPerturbAux_ne_zero_witness` carries them as hypotheses: it discharges the
-mathematically-substantive `koszulVarInner ≠ 0` conditional unconditionally, but not the
-well-formedness smoothness datum. Conditioning these hypotheses on `MDiffAt (T% W) x` (a
-statement-improvement leaving all proofs intact, since the tensoriality proof only ever applies them
-to differentiable slots) would make the whole chain fully unconditional.
+conditioned on `MDiffAt (T% W) x`: for a differentiable direction field `W`, the scalar field
+`z ↦ h z (Y z) (W z)` (resp. `z ↦ h z (X z) (W z)`) is differentiable. This is the satisfiable
+shape — the tensoriality proof only ever applies these hypotheses to slots already known
+differentiable (the local `hZ`/`hZ₁`/`hZ₂` in scope) — and it is genuinely dischargeable (see
+`MetricConnPerturbWitness.mdiff_hPert_of_mdiff`). Consequently the concrete witness
+`metricConnPerturbAux_ne_zero_witness : A(h) ≠ 0` is **fully unconditional**: it carries no
+smoothness side-hypotheses (only the manifold/instance setup), discharging both the
+mathematically-substantive `koszulVarInner ≠ 0` conditional and the well-formedness smoothness
+datum.
 
 -/
 
@@ -129,8 +132,10 @@ The differentiability hypotheses `hhYX`/`hhXY` are the smoothness of the scalar 
 `fun_prop` lemma is available, so they are carried as hypotheses). -/
 theorem tensorialAt_koszulVarInner_right
     (x : M)
-    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (Y z) (W z)) x)
-    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (X z) (W z)) x) :
+    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (Y z) (W z)) x)
+    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (X z) (W z)) x) :
     TensorialAt I E (koszulVarInner I cov h X Y · x) x where
   smul {f Z} hf hZ := by
     simp only [koszulVarInner, covDerivBilin]
@@ -141,7 +146,7 @@ theorem tensorialAt_koszulVarInner_right
       ext z; simp
     -- The connection Leibniz rule for `∇(f • Z)` (needed where `Z` is differentiated, terms 1 & 2).
     have lb := cov.isCovariantDerivativeOnUniv.leibniz hZ hf
-    rw [e1, e2, mvfderiv_fun_mul hf (hhYX Z), mvfderiv_fun_mul hf (hhXY Z)]
+    rw [e1, e2, mvfderiv_fun_mul hf (hhYX Z hZ), mvfderiv_fun_mul hf (hhXY Z hZ)]
     simp only [lb, Pi.smul_apply', add_apply,
       ContinuousLinearMap.smulRight_apply, smul_apply, map_smul, map_add, smul_eq_mul]
     ring
@@ -154,7 +159,8 @@ theorem tensorialAt_koszulVarInner_right
         fun z ↦ (h z (X z) (Z₁ z)) + (h z (X z) (Z₂ z)) := by
       ext z; simp
     have ab := cov.isCovariantDerivativeOnUniv.add hZ₁ hZ₂
-    rw [e1, e2, mvfderiv_fun_add (hhYX Z₁) (hhYX Z₂), mvfderiv_fun_add (hhXY Z₁) (hhXY Z₂)]
+    rw [e1, e2, mvfderiv_fun_add (hhYX Z₁ hZ₁) (hhYX Z₂ hZ₂),
+      mvfderiv_fun_add (hhXY Z₁ hZ₁) (hhXY Z₂ hZ₂)]
     simp only [ab, Pi.add_apply, map_add, add_apply]
     ring
 
@@ -166,8 +172,10 @@ noncomputable def koszulVarCovector
     (cov : CovariantDerivative I E (TangentSpace I : M → Type _))
     (h : Π x : M, TangentSpace I x →L[ℝ] TangentSpace I x →L[ℝ] ℝ)
     (X Y : Π x : M, TangentSpace I x) {x : M}
-    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (Y z) (W z)) x)
-    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (X z) (W z)) x) :
+    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (Y z) (W z)) x)
+    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (X z) (W z)) x) :
     TangentSpace I x →L[ℝ] ℝ :=
   TensorialAt.mkHom (koszulVarInner I cov h X Y · x) x
     (tensorialAt_koszulVarInner_right (cov := cov) I x hhYX hhXY)
@@ -175,8 +183,10 @@ noncomputable def koszulVarCovector
 omit [RiemannianBundle (fun (x : M) ↦ TangentSpace I x)] in
 theorem koszulVarCovector_apply
     {x : M}
-    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (Y z) (W z)) x)
-    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (X z) (W z)) x)
+    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (Y z) (W z)) x)
+    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (X z) (W z)) x)
     (hZ : MDiffAt (T% Z) x) :
     koszulVarCovector I cov h X Y hhYX hhXY (Z x) = koszulVarInner I cov h X Y Z x :=
   TensorialAt.mkHom_apply (tensorialAt_koszulVarInner_right (cov := cov) I x hhYX hhXY) hZ
@@ -190,8 +200,10 @@ noncomputable def metricConnPerturbAux
     (cov : CovariantDerivative I E (TangentSpace I : M → Type _))
     (h : Π x : M, TangentSpace I x →L[ℝ] TangentSpace I x →L[ℝ] ℝ)
     (X Y : Π x : M, TangentSpace I x) {x : M}
-    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (Y z) (W z)) x)
-    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (X z) (W z)) x) :
+    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (Y z) (W z)) x)
+    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (X z) (W z)) x) :
     TangentSpace I x :=
   (InnerProductSpace.toDual ℝ _).symm (koszulVarCovector I cov h X Y hhYX hhXY)
 
@@ -201,8 +213,10 @@ formula `2 g(A(h)(X, Y), Z) = (∇_X h)(Y,Z) + (∇_Y h)(X,Z) − (∇_Z h)(X,Y)
 already carries the factor `1/2`). -/
 theorem inner_metricConnPerturbAux
     {x : M}
-    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (Y z) (W z)) x)
-    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (X z) (W z)) x)
+    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (Y z) (W z)) x)
+    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (X z) (W z)) x)
     (v : TangentSpace I x) :
     inner ℝ (metricConnPerturbAux I cov h X Y hhYX hhXY) v
       = koszulVarCovector I cov h X Y hhYX hhXY v := by
@@ -238,8 +252,10 @@ The `X`/`Y` differentiability hypotheses (`hhYX`/`hhXY` vs. their swaps `hhXY'`/
 respective scalar-field smoothness data entering `metricConnPerturbAux`; they are logically
 interchangeable, so both are supplied. -/
 theorem metricConnPerturbAux_symm (hsymm : ∀ x u v, h x u v = h x v u) {x : M}
-    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (Y z) (W z)) x)
-    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (X z) (W z)) x) :
+    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (Y z) (W z)) x)
+    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (X z) (W z)) x) :
     metricConnPerturbAux I cov h X Y hhYX hhXY = metricConnPerturbAux I cov h Y X hhXY hhYX := by
   rw [metricConnPerturbAux, metricConnPerturbAux]
   congr 1
@@ -253,8 +269,10 @@ nontrivial data. Consequently `metricConnPerturbAux` genuinely depends on `h`: w
 a nonzero Koszul-variation covector, `A(h) ≠ 0`. (The musical isomorphism `toDual` is a linear
 *equivalence*, so it sends nonzero to nonzero.) -/
 theorem metricConnPerturbAux_ne_zero {x : M}
-    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (Y z) (W z)) x)
-    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (X z) (W z)) x)
+    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (Y z) (W z)) x)
+    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (X z) (W z)) x)
     (hne : koszulVarCovector I cov h X Y hhYX hhXY ≠ 0) :
     metricConnPerturbAux I cov h X Y hhYX hhXY ≠ 0 := by
   rw [metricConnPerturbAux]
@@ -270,8 +288,10 @@ omit [RiemannianBundle (fun (x : M) ↦ TangentSpace I x)] in
 witnesses that the whole construction — and hence `A(h)` via `metricConnPerturbAux_ne_zero` — is
 not identically zero. -/
 theorem koszulVarCovector_ne_zero {x : M}
-    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (Y z) (W z)) x)
-    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (fun z ↦ h z (X z) (W z)) x)
+    (hhYX : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (Y z) (W z)) x)
+    (hhXY : ∀ W : Π x : M, TangentSpace I x, MDiffAt (T% W) x →
+      MDiffAt (fun z ↦ h z (X z) (W z)) x)
     (hZ : MDiffAt (T% Z) x) (hne : koszulVarInner I cov h X Y Z x ≠ 0) :
     koszulVarCovector I cov h X Y hhYX hhXY ≠ 0 := by
   intro hzero
@@ -437,36 +457,34 @@ lemma mdiff_hPert_of_mdiff {x : EuclideanSpace ℝ (Fin 2)}
   exact (innerSL ℝ e0).mdifferentiableAt.congr_of_eventuallyEq
     (by filter_upwards with z; rw [innerSL_apply_apply])
 
-/-- **The Koszul-variation covector is nonzero for the explicit choice.** Given the smoothness data
-`hhYX`/`hhXY` (dischargeable on differentiable directions by `mdiff_hPert_of_mdiff`), the concrete
-covector is nonzero: its value `1/2` on the differentiable direction `cVF e₀` is provided by
+/-- **The Koszul-variation covector is nonzero for the explicit choice.** The smoothness data
+`hhYX`/`hhXY` — now conditioned on `MDiffAt (T% W) x` — is discharged unconditionally by
+`mdiff_hPert_of_mdiff`, so this witness carries no smoothness side-hypotheses: the concrete
+covector is nonzero, its value `1/2` on the differentiable direction `cVF e₀` being provided by
 `koszulVarInner_ne_zero_witness`. -/
-theorem koszulVarCovector_ne_zero_witness {x : EuclideanSpace ℝ (Fin 2)}
-    (hhYX : ∀ W : Π z : EuclideanSpace ℝ (Fin 2), TangentSpace 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) z,
-      MDiffAt (fun z ↦ hPert e0 z (cVF e0 z) (W z)) x)
-    (hhXY : ∀ W : Π z : EuclideanSpace ℝ (Fin 2), TangentSpace 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) z,
-      MDiffAt (fun z ↦ hPert e0 z (cVF e0 z) (W z)) x) :
+theorem koszulVarCovector_ne_zero_witness {x : EuclideanSpace ℝ (Fin 2)} :
     koszulVarCovector 𝓘(ℝ, EuclideanSpace ℝ (Fin 2))
       (leviCivitaConnection 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) (EuclideanSpace ℝ (Fin 2)))
-      (hPert e0) (cVF e0) (cVF e0) hhYX hhXY ≠ 0 :=
+      (hPert e0) (cVF e0) (cVF e0)
+      (fun W (hW : MDiffAt (T% W) x) ↦ mdiff_hPert_of_mdiff W hW)
+      (fun W (hW : MDiffAt (T% W) x) ↦ mdiff_hPert_of_mdiff W hW) ≠ 0 :=
   koszulVarCovector_ne_zero (Z := cVF e0) (cov := leviCivitaConnection _ _)
-    _ hhYX hhXY (cVF_mdiff e0 x) (koszulVarInner_ne_zero_witness x)
+    _ _ _ (cVF_mdiff e0 x) (koszulVarInner_ne_zero_witness x)
 
-/-- **`A(h) ≠ 0` for the explicit choice** — chaining `koszulVarCovector_ne_zero_witness` through
-`metricConnPerturbAux_ne_zero`. On flat Euclidean space `ℝ²`, the constant field `cVF e₀` and the
-nonconstant symmetric metric perturbation `hPert e₀` give a nonzero metric→connection variation
-`A(h)`; the underlying Koszul-variation scalar is `1/2` (`koszulVarInner_witness`). The smoothness
-data `hhYX`/`hhXY` is the intrinsic well-formedness datum of the covector construction
-(dischargeable on differentiable directions by `mdiff_hPert_of_mdiff`). -/
-theorem metricConnPerturbAux_ne_zero_witness {x : EuclideanSpace ℝ (Fin 2)}
-    (hhYX : ∀ W : Π z : EuclideanSpace ℝ (Fin 2), TangentSpace 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) z,
-      MDiffAt (fun z ↦ hPert e0 z (cVF e0 z) (W z)) x)
-    (hhXY : ∀ W : Π z : EuclideanSpace ℝ (Fin 2), TangentSpace 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) z,
-      MDiffAt (fun z ↦ hPert e0 z (cVF e0 z) (W z)) x) :
+/-- **`A(h) ≠ 0` for the explicit choice — fully unconditional** — chaining
+`koszulVarCovector_ne_zero_witness` through `metricConnPerturbAux_ne_zero`. On flat Euclidean space
+`ℝ²`, the constant field `cVF e₀` and the nonconstant symmetric metric perturbation `hPert e₀`
+give a nonzero metric→connection variation `A(h)`; the underlying Koszul-variation scalar is `1/2`
+(`koszulVarInner_witness`). The smoothness data of the covector construction — now conditioned on
+`MDiffAt (T% W) x` — is discharged unconditionally by `mdiff_hPert_of_mdiff`, so this witness
+carries NO smoothness side-hypotheses: only the manifold/instance setup. -/
+theorem metricConnPerturbAux_ne_zero_witness {x : EuclideanSpace ℝ (Fin 2)} :
     metricConnPerturbAux 𝓘(ℝ, EuclideanSpace ℝ (Fin 2))
       (leviCivitaConnection 𝓘(ℝ, EuclideanSpace ℝ (Fin 2)) (EuclideanSpace ℝ (Fin 2)))
-      (hPert e0) (cVF e0) (cVF e0) hhYX hhXY ≠ 0 :=
-  metricConnPerturbAux_ne_zero _ hhYX hhXY (koszulVarCovector_ne_zero_witness hhYX hhXY)
+      (hPert e0) (cVF e0) (cVF e0)
+      (fun W (hW : MDiffAt (T% W) x) ↦ mdiff_hPert_of_mdiff W hW)
+      (fun W (hW : MDiffAt (T% W) x) ↦ mdiff_hPert_of_mdiff W hW) ≠ 0 :=
+  metricConnPerturbAux_ne_zero _ _ _ koszulVarCovector_ne_zero_witness
 
 end MetricConnPerturbWitness
 
